@@ -1,0 +1,99 @@
+---
+- name: nautilus role
+  tags:
+    - nautilus
+  block:
+
+  # assert
+  - name: Assertions for un.install role
+    ansible.builtin.assert:
+      that:
+      - nautilus_scripts_path != None
+      - nautilus_templates_path != None
+
+  # apt
+  - name: Install apt packages
+    become: true
+    ansible.builtin.apt:
+      state: present
+      name:
+      - nautilus
+
+  # nautilus_scripts
+  - when: nautilus_scripts | length > 0
+    block:
+    
+    # zenity
+    - name: Install zenity libnotify-bin
+      become: true
+      ansible.builtin.apt:
+        state: present
+        name:
+        - zenity
+        - libnotify-bin
+
+    # apt imagemagick
+    # selects the items of nautilus_scripts that pass the 'search' test which uses a regex
+    # the a new list is created from the selected items
+    # which is tested if it has items included
+    - when: nautilus_scripts | select("search", "img/|image/") | list | length > 0
+      name: Install imagemagick
+      become: true
+      ansible.builtin.apt:
+        state: present
+        name: imagemagick
+
+    # apt ffmpeg
+    - when: nautilus_scripts | select("search", "audio") | list | length > 0 # when: "'img/*' in nautilus_scripts"
+      name: Install ffmpeg
+      become: true
+      ansible.builtin.apt:
+        state: present
+        name: ffmpeg
+
+    # mk subdirs
+    - name: Mksubdirs for {{ nautilus_scripts }} in {{ nautilus_scripts_path }}
+      become: true
+      loop: "{{ nautilus_scripts }}"
+      when: "'/' in item"
+      ansible.builtin.file:
+        state: directory
+        path: "{{ nautilus_scripts_path }}/{{ item[:item.rfind('/')] }}" # img/convert-to-png.sh -> img
+        owner: "{{ nautilus_user }}"
+        group: "{{ nautilus_user }}"
+
+    # copy scripts
+    - when: nautilus_scripts | length > 0
+      name: Copy {{ nautilus_scripts }} to {{ nautilus_scripts_path }}
+      become: true
+      loop: "{{ nautilus_scripts }}"
+      ansible.builtin.copy:
+        src: "scripts/{{ item }}" # img/convert-to-png.sh
+        dest: "{{ nautilus_scripts_path }}/{{ item }}"
+        owner: "{{ nautilus_user }}"
+        group: "{{ nautilus_user }}"
+        mode: "u=rwx,g=,o="
+
+  # nautilus_templates
+  - when: nautilus_templates | length > 0
+    block:
+
+    # mkdir templates
+    - name: Mkdir {{ nautilus_templates_path }}
+      become: true
+      ansible.builtin.file:
+        state: directory
+        path: "{{ nautilus_templates_path }}"
+        owner: "{{ nautilus_user }}"
+        group: "{{ nautilus_user }}"
+
+    # copy templates
+    - name: Copy templates
+      become: true
+      loop: "{{ nautilus_templates }}"
+      ansible.builtin.copy:
+        src: "templates/{{ item }}" # text.txt
+        dest: "{{ nautilus_templates_path }}/{{ item }}"
+        owner: "{{ nautilus_user }}"
+        group: "{{ nautilus_user }}"
+        mode: u=rw,g=,o=
