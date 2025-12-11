@@ -44,12 +44,20 @@
         name: imagemagick
 
     # apt ffmpeg
-    - when: nautilus_scripts | select("search", "audio") | list | length > 0 # when: "'img/*' in nautilus_scripts"
+    - when: nautilus_scripts | select("search", "audio") | list | length > 0
       name: Install ffmpeg
       become: true
       ansible.builtin.apt:
         state: present
         name: ffmpeg
+
+    # apt gpg
+    - when: nautilus_scripts | select("search", "crypto") | list | length > 0
+      name: Install gpg
+      become: true
+      ansible.builtin.apt:
+        state: present
+        name: gpg
 
     # mk subdirs
     - name: Mksubdirs for {{ nautilus_scripts }} in {{ nautilus_scripts_path }}
