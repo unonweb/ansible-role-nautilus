@@ -1,0 +1,25 @@
+# assert
+- name: Check {{ nautilus_templates_path }}
+  ansible.builtin.assert:
+    that:
+    - nautilus_templates_path.startswith('/home/' + nautilus_user)
+
+# mkdir templates
+- name: Mkdir {{ nautilus_templates_path }}
+  become: true
+  ansible.builtin.file:
+    state: directory
+    path: "{{ nautilus_templates_path }}"
+    owner: "{{ nautilus_user }}"
+    group: "{{ nautilus_user }}"
+
+# copy templates
+- name: Copy {{ nautilus_templates }} to {{ nautilus_templates_path }}
+  become: true
+  loop: "{{ nautilus_templates }}"
+  ansible.builtin.copy:
+    src: "templates/{{ item }}" # text.txt
+    dest: "{{ nautilus_templates_path }}/{{ item }}"
+    owner: "{{ nautilus_user }}"
+    group: "{{ nautilus_user }}"
+    mode: u=rw,g=,o=
