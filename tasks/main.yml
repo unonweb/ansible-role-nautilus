@@ -5,7 +5,7 @@
   block:
 
   # assert
-  - name: Assertions for un.install role
+  - name: Assertions for nautilus role
     ansible.builtin.assert:
       that:
       - nautilus_scripts_path != None
