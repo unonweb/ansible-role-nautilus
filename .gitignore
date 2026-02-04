@@ -1,1 +1,3 @@
 .ansible/.lock
+files/tessdata*
+files/scripts/image/text-recognition.sh
