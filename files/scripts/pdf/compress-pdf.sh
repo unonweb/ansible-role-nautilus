@@ -25,22 +25,6 @@ function main {
 		exit 1
 	fi
 
-	# Check if the user has selected any files
-	# we double check. Remove the first part if you plan to manually invoke the script
-	if [ "x${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS}" = "x"  -o  "$#" = "0" ]; then
-		${ZENITY} --error --title="${ZENITY_TITLE}" --text="No file selected."
-		exit 1
-	fi
-
-	# Check if we can properly parse the arguments
-	INPUT=("$@")
-	N=("$#")
-	if [ "${#INPUT[@]}" != "$N" ]; then
-		# comparing the number of arguments the script is given with what it can count
-		${ZENITY} --error --title="${ZENITY_TITLE}" # if we arrive here, there is something very messed
-		exit 1
-	fi
-
 	# Ask to select compression
 	local compression_lvl=$(zenity --list --title="Kompressions-Level" --text "Je höher, desto kleiner das Dokument,\naber desto niedrieger die Qualität" --radiolist --height 400 --width 300 \
 		--column "" \
@@ -77,7 +61,14 @@ function main {
 		local selected_name=$(basename "${selected_path}")
 		local out_filename=${selected_name%.*}${OUTPUT_SUFFIX}.${selected_name##*.}
 		local out_basename=$(basename "${out_filename}")
-		local tmp_filename=tmp-${out_basename}
+		local tmp_filename="tmp-${out_basename}"
+		
+		# debug
+		echo "selected_path: ${selected_path}"
+		echo "out_filename: ${out_filename}"
+		echo "out_basename: ${out_basename}"
+		echo "tmp_filename: ${tmp_filename}"
+		
 
 		if [[ -e ${tmp_filename} ]]; then 
 			${ZENITY} --error --title="${ZENITY_TITLE}" --text "Temporary filename already exists: ${tmp_filename}"
@@ -85,9 +76,12 @@ function main {
 		fi
 
 		# Check if it's a PDF file
-		# ignoring case for 'pdf'; as far as I know, the slash before (sth/pdf) is universal mimetype output. In most cases we can even expect 'application/pdf' (portability issues?).
-		if ! file --brief --mime-type "${selected_path}" | grep -i "/pdf"; then 
-			${ZENITY} --error --title="${ZENITY_TITLE}" --text="Dies ist kein PDF:\n${selected_path}\n\nDatei wird übersprungen!"
+		# ignoring case for 'pdf'; as far as I know, the slash before (sth/pdf) is universal mimetype output. In most cases we can even expect 'application/pdf' (portability issues?)
+		file --brief --mime-type "${selected_path}" | grep -iq "/pdf"
+		local file_exit_code=${?}
+		
+		if [[ ${file_exit_code} -ne 0 ]]; then
+			${ZENITY} --error --title="${ZENITY_TITLE}" --text="Dies ist kein PDF:\n<b>${selected_path}</b>\n\nDatei wird übersprungen!"
 			continue
 		fi
 
@@ -104,7 +98,7 @@ function main {
 			-dGrayImageResolution=${image_resolution} \
 			-dMonoImageDownsampleType=/Bicubic \
 			-dMonoImageResolution=${image_resolution} \
-			-sOutputFile=${tmp_filename} \
+			-sOutputFile="${tmp_filename}" \
 			"${selected_path}" & echo -e "${!}\n"
 			# we output the pid so that it passes the pipe
 			# the explicit linefeed starts the zenity progressbar pulsation
@@ -129,4 +123,4 @@ function main {
 	done
 }
 
-main ${@}
+main "${@}"
