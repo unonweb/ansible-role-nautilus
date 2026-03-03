@@ -104,7 +104,6 @@ function main {
 		# ignoring case for 'pdf'; as far as I know, the slash before (sth/pdf) is universal mimetype output. In most cases we can even expect 'application/pdf' (portability issues?)
 		file --brief --mime-type "${selected_path}" | grep -iq "/pdf"
 		local file_exit_code=${?}
-		
 		if [[ ${file_exit_code} -ne 0 ]]; then
 			${ZENITY} --error --title="${ZENITY_TITLE}" --text="Dies ist kein PDF:\n<b>${selected_path}</b>\n\nDatei wird übersprungen!"
 			continue
