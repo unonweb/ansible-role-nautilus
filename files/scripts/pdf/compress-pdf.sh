@@ -10,6 +10,18 @@
 ZENITY_TITLE="Compress PDF"
 COMPRESSPDF_BATCH_ABORT_ERR=115
 OUTPUT_SUFFIX="-compressed"
+GRAY_SCALE_ARGS=""
+PDF_VERSION="1.5"
+DEBUG=1
+
+function get_pdf_version {
+	# $1 is the input file. The PDF version is contained in the
+	# first 1024 bytes and will be extracted from the PDF file.
+	PDF_VERSION=$(head -c 1024 "$1" | LC_ALL=C awk 'BEGIN { found=0 }{ if (match($0, "%PDF-[0-9]\\.[0-9]") && ! found) { print substr($0, RSTART + 5, 3); found=1 } }')
+	if [ -z "${PDF_VERSION}" ] || [ "${#PDF_VERSION}" != "3" ]; then
+		return 1
+	fi
+}
 
 function main {
 
@@ -26,49 +38,62 @@ function main {
 	fi
 
 	# Ask to select compression
-	local compression_lvl=$(zenity --list --title="Kompressions-Level" --text "Je höher, desto kleiner das Dokument,\naber desto niedrieger die Qualität" --radiolist --height 400 --width 300 \
-		--column "" \
-		--column "Level" \
-		FALSE 1 \
-		TRUE 2 \
-		FALSE 3
+	local user_options=$(zenity \
+		--title="Compress-PDF" \
+		--forms \
+		--text="Einstellungen" \
+		--add-combo="Bild-Qualität" \
+		--combo-values="36 dpi|48 dpi|72 dpi|144 dpi|" \
+		--add-combo="Farbmodus" \
+		--combo-values="Farbe|Graustufen" \
 	)
 
-	if [[ -z ${compression_lvl} ]]; then
-		echo "Error: No compression lvl set. Exiting."
+	if [[ -z ${user_options} ]]; then
+		echo "Aborted by user. Exiting."
 		exit 1
 	fi
 
-	case ${compression_lvl} in
+	# Split the string into two parts
+	local img_res="${user_options%%|*}" # Get everything before the '|'
+	local color_mode="${user_options##*|}" # Get everything after the '|'
 
-		1)
-			image_resolution=144
-			;;
-		2)
-			image_resolution=128
-			;;
-		3)
-			image_resolution=64
-			;;
-		*)
-			echo "ERROR: Compression selection failed"
-			exit 1
-			;;
-	esac
+	# Remove ' dpi' from img_res
+	img_res="${img_res/dpi/}"
 
+	# remove trailing whitespaces
+	img_res=${img_res%"${img_res##*[![:space:]]}"}
+	color_mode=${color_mode%"${color_mode##*[![:space:]]}"}
+
+	# remove leading whitespaces
+	img_res=${img_res#"${img_res%%[![:space:]]*}"}
+	color_mode=${color_mode#"${color_mode%%[![:space:]]*}"}
+
+	# Set grayscale args
+	if [ "${color_mode}" = "Graustufen" ]; then
+		GRAY_SCALE_ARGS="-sProcessColorModel=DeviceGray -sColorConversionStrategy=Gray -dOverrideICC"
+	else
+		GRAY_SCALE_ARGS=""
+	fi
+	
+	if ((DEBUG)); then
+		echo "img_res: ${img_res}"
+		echo "color_mode: ${color_mode}"
+		echo "GRAY_SCALE_ARGS: ${GRAY_SCALE_ARGS}"
+	fi
+
+	# Loop over selected files
 	for selected_path in "${@}"; do
 		
 		local selected_name=$(basename "${selected_path}")
 		local out_filename=${selected_name%.*}${OUTPUT_SUFFIX}.${selected_name##*.}
 		local out_basename=$(basename "${out_filename}")
-		local tmp_filename="tmp-${out_basename}"
+		local tmp_filename=tmp-${out_basename}
 		
-		# debug
-		echo "selected_path: ${selected_path}"
-		echo "out_filename: ${out_filename}"
-		echo "out_basename: ${out_basename}"
-		echo "tmp_filename: ${tmp_filename}"
-		
+		if ((DEBUG)); then
+		  echo "selected_name: ${selected_name}"
+		  echo "tmp_filename: ${tmp_filename}"
+		  echo "out_filename: ${out_filename}"
+	  fi
 
 		if [[ -e ${tmp_filename} ]]; then 
 			${ZENITY} --error --title="${ZENITY_TITLE}" --text "Temporary filename already exists: ${tmp_filename}"
@@ -85,27 +110,38 @@ function main {
 			continue
 		fi
 
+		# Get the PDF version of the input file.
+		get_pdf_version "${selected_path}" || PDF_VERSION="1.5"
+
 		# Execute ghostscript while showing a progress bar
 		(
-			gs -q -dNOPAUSE -dBATCH -dSAFER \
+			gs \
+			-q -dNOPAUSE -dBATCH -dSAFER \
 			-sDEVICE=pdfwrite \
-			-dCompatibilityLevel=1.4 \
+			-dCompatibilityLevel=${PDF_VERSION} \
 			-dPDFSETTINGS=/screen \
-			-dEmbedAllFonts=true -dSubsetFonts=true \
+			-dEmbedAllFonts=true \
+			-dSubsetFonts=true \
+			-dAutoRotatePages=/None \
 			-dColorImageDownsampleType=/Bicubic \
-			-dColorImageResolution=${image_resolution} \
+			-dColorImageResolution=${img_res} \
+			-dColorImageDownsampleThreshold="1.0" \
 			-dGrayImageDownsampleType=/Bicubic \
-			-dGrayImageResolution=${image_resolution} \
+			-dGrayImageResolution=${img_res} \
+			-dGrayImageDownsampleThreshold="1.0" \
 			-dMonoImageDownsampleType=/Bicubic \
-			-dMonoImageResolution=${image_resolution} \
-			-sOutputFile="${tmp_filename}" \
+			-dMonoImageResolution=${img_res} \
+			-dMonoImageDownsampleThreshold="1.0" \
+			-dPreserveAnnots=false \
+			-sOutputFile=${tmp_filename} \
+			${GRAY_SCALE_ARGS} \
 			"${selected_path}" & echo -e "${!}\n"
 			# we output the pid so that it passes the pipe
 			# the explicit linefeed starts the zenity progressbar pulsation
 		) | (
 			# the pipes create implicit subshells; marking them explicitly
 			read PIPED_PID
-			if ${ZENITY} --progress --pulsate --auto-close --title="${ZENITY_TITLE}" --text "Verarbeite Date:\n<b>${out_basename}</b>"; then
+			if ${ZENITY} --progress --pulsate --auto-close --title="${ZENITY_TITLE}" --text "Verarbeite Datei:\n<b>${out_basename}</b>"; then
 				# we go on to the next file as fast as possible (this subprocess survives the end of the script, so it is even safer)
 				mv -f "${tmp_filename}" "${out_filename}" &
 				# notify-send "Compress PDF" "${out_basename} "has been successfully compressed""
