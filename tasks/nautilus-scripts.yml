@@ -62,14 +62,6 @@
     state: present
     name: gpg
 
-# pdfunite
-- when: nautilus_scripts | select("search", "merge-pdf") | list | length > 0
-  name: Install poppler-utils (pdfunite)
-  become: true
-  ansible.builtin.apt:
-    state: present
-    name: poppler-utils
-
 # assert
 - name: Check {{ nautilus_scripts_path }}
   ansible.builtin.assert:
