@@ -1,10 +1,21 @@
 # nautilus_scripts_reset
 - when: nautilus_scripts_reset == true
-  name: Reset/Empty directory {{ nautilus_scripts_path }}/
-  ansible.builtin.file:
-    state: absent
-    path: "{{ nautilus_scripts_path }}/*"
-  
+  block:
+
+  - name: Reset directory {{ nautilus_scripts_path }} - Find files
+    ansible.builtin.find:
+      paths: "{{ nautilus_scripts_path }}"
+      recurse: false
+      file_type: any
+    register: __nautilus_scripts_reset_found_items
+
+  - when: __nautilus_scripts_reset.files | length > 0
+    name: Reset directory {{ nautilus_scripts_path }} - Remove found files
+    loop: "{{ __nautilus_scripts_reset.files }}"
+    ansible.builtin.file:
+      path: "{{ item.path }}"
+      state: absent
+
 # zenity
 - name: Install zenity libnotify-bin
   become: true
