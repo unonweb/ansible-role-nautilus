@@ -12,8 +12,9 @@ if [ "${#}" -lt 2 ]; then
     exit 1
 fi
 
-if ! which pdfunite; then
-	zenity --error --title="Error" --text="This script requires the poppler-utils package, which is not installed. Please install it and try again."
+# Check if Ghostscript is installed
+if ! which gs; then
+	${ZENITY} --error --title="${ZENITY_TITLE}" --text="This script requires the 'ghostscript' package, which is not installed. Please install it and try again."
 	exit 1
 fi
 
@@ -56,15 +57,16 @@ if [[ "${OUT_PATH}" != *.pdf ]]; then
 fi
 
 # Merge the PDFs using pdfunite
-CMD_OUTPUT=$(pdfunite "${@}" "${OUT_PATH}")
+CMD_OUTPUT=$(gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile="${OUT_PATH}" "${@}" 2>&1 | zenity --progress --pulsate --auto-close --title="${ZENITY_TITLE}" --text "Erstelle Datei:\n<b>${OUT_PATH}</b>")
+#CMD_OUTPUT=$(pdfunite "${@}" "${OUT_PATH}" 2>&1)
 CMD_EXIT_CODE=${?}
 
 if ((DEBUG)); then
-	echo ${CMD_OUTPUT}
+	echo "CMD_OUTPUT: ${CMD_OUTPUT}"
 fi
 
 if [ ${CMD_EXIT_CODE} -eq 0 ]; then
-    zenity --info --text="PDFs successfully merged into:\n<b>${OUT_PATH}</b>"
+    zenity --info --text="PDFs zusammengeführt:\n<b>${OUT_PATH}</b>"
 else
-    zenity --error --title="Failed to merge PDFs" --text="${CMD_OUTPUT}"
+    zenity --error --title="Fehler beim Zusammenführen der PDFs" --text="${CMD_OUTPUT}"
 fi
