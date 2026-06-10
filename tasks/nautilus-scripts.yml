@@ -7,11 +7,11 @@
       paths: "{{ nautilus_scripts_path }}"
       recurse: false
       file_type: any
-    register: __nautilus_scripts_reset_found_items
+    register: __nautilus_scripts_reset_found
 
-  - when: __nautilus_scripts_reset.files | length > 0
+  - when: __nautilus_scripts_reset_found.files | length > 0
     name: Reset directory {{ nautilus_scripts_path }} - Remove found files
-    loop: "{{ __nautilus_scripts_reset.files }}"
+    loop: "{{ __nautilus_scripts_reset_found.files }}"
     ansible.builtin.file:
       path: "{{ item.path }}"
       state: absent
