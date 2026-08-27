@@ -4,10 +4,19 @@ DEBUG=0
 # Create an array from the string
 readarray -t SELECTED_PATHS <<< "${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS}"
 # get directory to open using the last element in the array of selected files
-OPEN_DIR=$(dirname ${SELECTED_PATHS[1]})
+OPEN_DIR=$(dirname "${SELECTED_PATHS[1]}")
+
+# remove empty items
+TMP_ARR=()
+for selected_path in "${SELECTED_PATHS[@]}"; do
+	if [[ -n ${selected_path} ]]; then 
+		TMP_ARR+=("${selected_path}")
+	fi
+done
+SELECTED_PATHS=("${TMP_ARR[@]}")
 
 # Check if there are at least two files selected
-if [ "${#}" -lt 2 ]; then
+if [ "${#SELECTED_PATHS[@]}" -lt 2 ]; then
     zenity --error --text="Please select at least two PDF files."
     exit 1
 fi
@@ -24,9 +33,13 @@ if ((DEBUG)); then
 fi
 
 # Loop over selected files
-for selected_path in ${SELECTED_PATHS[@]}; do
-		# Check if it's a PDF file
+for selected_path in "${SELECTED_PATHS[@]}"; do
+	# Check if it's a PDF file
 	# ignoring case for 'pdf'; as far as I know, the slash before (sth/pdf) is universal mimetype output. In most cases we can even expect 'application/pdf' (portability issues?)
+	if [[ -z ${selected_path} ]]; then
+		continue
+	fi
+	# check if it's a pdf
 	file --brief --mime-type "${selected_path}" | grep -iq "/pdf"
 	file_exit_code=${?}
 	if [[ ${file_exit_code} -ne 0 ]]; then
