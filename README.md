@@ -58,3 +58,21 @@ Usage
 
 Requirements
 - pdfunite command
+
+
+EXTENSIONS
+==========
+
+
+Author: Gustavo Widman
+Source: https://github.com/GustavoWidman/nautilus-open-in-ptyxis/tree/main
+
+- nautilus-open-in-ptyxis
+
+Author: SimBoi
+Source: https://github.com/SimBoi/nautilus-extension-collection
+
+- nautilus-open-in-vscode
+- nautilus-more-copy
+- nautilus-git-operations
+- nautilus-create-new-file
