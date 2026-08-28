@@ -16,4 +16,4 @@ nautilus_templates_path: "/home/{{ nautilus_user }}/templates" # must be set by 
 # ----------
 nautilus_extensions: [] # relative to {{ role_path }}/files/extensions
 nautilus_extensions_scope: user
-nautilus_scripts_reset: false
+nautilus_extensions_reset: false
