@@ -26,3 +26,7 @@
   # nautilus_templates
   - when: nautilus_templates | length > 0
     ansible.builtin.import_tasks: nautilus-templates.yml
+
+  # nautilus_extensions
+  - when: nautilus_extensions | length > 0
+    ansible.builtin.import_tasks: nautilus-extensions.yml
