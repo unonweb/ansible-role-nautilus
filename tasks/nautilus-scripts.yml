@@ -1,6 +1,6 @@
 ---
 # mkdir scripts
-- name: Mkdir {{ nautilus_scripts_path }}
+- name: Mkdir scripts {{ nautilus_scripts_path }}
   become: true
   ansible.builtin.file:
     state: directory
@@ -12,7 +12,7 @@
 - when: nautilus_scripts_reset == true
   block:
 
-  - name: Reset directory {{ nautilus_scripts_path }} - Find files
+  - name: Reset scripts directory {{ nautilus_scripts_path }} - Find files
     ansible.builtin.find:
       paths: "{{ nautilus_scripts_path }}"
       recurse: false
@@ -20,14 +20,14 @@
     register: __nautilus_scripts_reset_found
 
   - when: __nautilus_scripts_reset_found.files | length > 0
-    name: Reset directory {{ nautilus_scripts_path }} - Remove found files
+    name: Reset scripts directory {{ nautilus_scripts_path }} - Remove found files
     loop: "{{ __nautilus_scripts_reset_found.files }}"
     ansible.builtin.file:
       path: "{{ item.path }}"
       state: absent
 
 # zenity
-- name: Install zenity libnotify-bin
+- name: Install scripts requirements (zenity libnotify-bin)
   become: true
   ansible.builtin.apt:
     state: present
@@ -102,7 +102,7 @@
 
 # copy scripts
 - when: nautilus_scripts | length > 0
-  name: Copy {{ nautilus_scripts }} to {{ nautilus_scripts_path }}
+  name: Copy scripts {{ nautilus_scripts }} to {{ nautilus_scripts_path }}
   become: true
   loop: "{{ nautilus_scripts }}"
   ansible.builtin.copy:
