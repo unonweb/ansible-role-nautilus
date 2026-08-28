@@ -1,7 +1,19 @@
 ---
 nautilus_user:
+
+# SCRIPTS
+# -------
 nautilus_scripts: [] # relative to {{ role_path }}/files/scripts
 nautilus_scripts_path: "/home/{{ nautilus_user }}/.local/share/nautilus/scripts"
 nautilus_scripts_reset: false
+
+# TEMPLATES
+# ---------
 nautilus_templates: [] # relative to {{ role_path }}/files/templates
 nautilus_templates_path: "/home/{{ nautilus_user }}/templates" # must be set by xdg-user-dirs
+
+# EXTENSIONS
+# ----------
+nautilus_extensions: [] # relative to {{ role_path }}/files/extensions
+nautilus_extensions_scope: user
+nautilus_scripts_reset: false

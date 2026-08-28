@@ -1,0 +1,51 @@
+---
+- tags: [nautilus-extensions]
+  vars:
+    __nautilus_extensions_path: "{{ __nautilus_extensions_path_user if nautilus_extensions_scope == 'user' else __nautilus_extensions_path_system }}"
+  block:
+
+  # apt
+  - name: Install python3-nautilus
+    become: true
+    ansible.builtin.apt:
+      state: present
+      name:
+        - python3-nautilus
+
+  # reset
+  - when: nautilus_extensions_reset == true
+    block:
+
+    - name: Reset directory {{ __nautilus_extensions_path }} - Find files
+      ansible.builtin.find:
+        paths: "{{ __nautilus_extensions_path }}"
+        recurse: false
+        file_type: any
+      register: __nautilus_extensions_reset_found
+
+    - when: __nautilus_extensions_reset_found.files | length > 0
+      name: Reset directory {{ __nautilus_extensions_path }} - Remove found files
+      loop: "{{ __nautilus_extensions_reset_found.files }}"
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+
+  # mkdir extensions
+  - name: Mkdir {{ __nautilus_extensions_path }}
+    become: true
+    ansible.builtin.file:
+      state: directory
+      path: "{{ __nautilus_extensions_path }}"
+      owner: "{{ nautilus_user if nautilus_extensions_scope == 'user' else 'root' }}"
+      group: "{{ nautilus_user if nautilus_extensions_scope == 'user' else 'root' }}"
+
+  # copy extensions
+  - when: nautilus_extensions | length > 0
+    name: Copy {{ nautilus_extensions }} to {{ __nautilus_extensions_path }}
+    become: true
+    loop: "{{ nautilus_extensions }}"
+    ansible.builtin.copy:
+      src: "extensions/{{ item }}"
+      dest: "{{ __nautilus_extensions_path }}/{{ item }}"
+      owner: "{{ nautilus_user if nautilus_extensions_scope == 'user' else 'root' }}"
+      group: "{{ nautilus_user if nautilus_extensions_scope == 'user' else 'root' }}"

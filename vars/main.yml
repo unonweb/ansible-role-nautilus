@@ -1,0 +1,3 @@
+---
+__nautilus_extensions_path_user: "/home/{{ nautilus_user }}/.local/share/nautilus-python/extensions"
+__nautilus_extensions_path_system: /usr/share/nautilus-python/extensions/
